@@ -2,4 +2,4 @@ env/
 .vscode
 __pycache__
 app/gis_data/
-.db*
+database.db*
