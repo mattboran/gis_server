@@ -9,7 +9,7 @@ class Factory: # pylint: disable=too-few-public-methods
 
 class BuildingShapeFactory(Factory):
 
-    def create_denver(self, data: dict, idx: str):
+    def create_denver(self, data: dict, idx: int):
         properties = data['properties']
         building_type = properties['BLDG_TYPE']
         if building_type == 'Garage/Shed':
@@ -25,10 +25,10 @@ class BuildingShapeFactory(Factory):
 
 class AddressedLocationFactory(Factory):
 
-    def create_denver(self, data: dict, idx: str):
+    def create_denver(self, data: dict, idx: int):
         properties = data['properties']
         building_type = properties['BUILDING_T']
-        if building_type == 'Garage/Shed': 
+        if building_type == 'Garage/Shed':
             return None
         coord = [(properties['LONGITUDE'], properties['LATITUDE'])]
         return {'idx': idx,

@@ -3,6 +3,7 @@ from typing import List, Tuple
 
 import peewee as pw
 
+from main import db
 
 CoordinateList = List[Tuple[float, float]]
 
@@ -12,6 +13,7 @@ class CoordinateListField(pw.TextField):
 
     def python_value(self, value) -> CoordinateList:
         return json.loads(value)
+
 
 class Address(pw.Model):
     idx = pw.IntegerField(primary_key=True)
@@ -32,10 +34,8 @@ class Address(pw.Model):
     def center(self):
         return self.coord[0]
 
-
-class Bucket(pw.Model):
-    idx = pw.IntegerField(primary_key=True)
-    region = pw.TextField(null=False)
+    class Meta:
+        database = db
 
 
 class Building(pw.Model):
@@ -45,8 +45,8 @@ class Building(pw.Model):
     ground_elevation = pw.IntegerField(null=True)
     building_type = pw.TextField(null=False)
     polygon_points = CoordinateListField(null=False)
+    bucket_id = pw.IntegerField(null=True)
     address_idx = pw.ForeignKeyField(Address, backref='address', null=True)
-    bucket_id = pw.ForeignKeyField(Bucket, backref='bucket', null=True)
 
     @property
     def center(self):
@@ -67,4 +67,5 @@ class Building(pw.Model):
             max_y = max(y, max_y)
         return min_x, min_y, max_x, max_y
 
-
+    class Meta:
+        database = db

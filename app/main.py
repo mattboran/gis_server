@@ -1,7 +1,12 @@
 from fastapi import FastAPI
-import peewee as pw
+from peewee import SqliteDatabase
 
 app = FastAPI()
+
+db = SqliteDatabase('database.db', pragmas={
+    'journal_mode': 'wal',
+    'cache_size': -1024 * 64
+})
 
 @app.get('/')
 def read_root():
