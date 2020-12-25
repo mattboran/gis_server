@@ -64,14 +64,6 @@ class Ray:
 class GridPartition:
 
     def __init__(self, n: int, items: List[Centerable], extent: Union[np.array, None]=None):
-        """
-        Initialize an `n` by `n` grid with `items`.
-
-        Args:
-            n (int): grid dimension
-            items ([centered]): any class that implements property .center
-            extent (np.array or None): provided extent. If None, will get computed
-        """
         self.n = n
         self.items = items
         centers = [item.center for item in items]
@@ -82,13 +74,7 @@ class GridPartition:
             self.extent = self.get_item_extent()
         self.buckets = self.partition()
 
-    def get_item_extent(self, delta=0.005):
-        """
-        Get the bounding box of all item centers.
-
-        Returns:
-            np.array: bounding box for all item centers +/- a small delta
-        """
+    def get_item_extent(self, delta: float=0.005):
         min_x = np.min(self.centers[0,])
         max_x = np.max(self.centers[0,])
         min_y = np.min(self.centers[1,])
@@ -173,10 +159,6 @@ class Consolidator:
         return self.address_grid.items
 
     def consolidate(self):
-        """
-        Associates `shape_mgr.building_shapes` with `address_mgr.addresses` by using their respective
-        `GridPartitions`.
-        """
         def distances_to_loc(centers, loc):
             locs = np.array([loc,] * centers.shape[1])
             distances = np.sum((centers - locs.T)**2, axis=0)

@@ -1,6 +1,7 @@
 import json
-from typing import List, Tuple
+from typing import List, Tuple, Union
 
+import numpy as np
 import peewee as pw
 
 from main import db
@@ -19,6 +20,15 @@ class Bucket(pw.Model):
     region = pw.TextField(primary_key=True)
     extent = CoordinateListField(null=False)
     n_grid = pw.IntegerField(null=False)
+
+    def index_for_coordinate(self, coord: Tuple[float, float]) -> Union[int, None]:
+        cols = np.linspace(self.extent[0][0], self.extent[1][0], num=self.n_grid)
+        rows = np.linspace(self.extent[0][1], self.extent[1][1], num=self.n_grid)
+        col = np.searchsorted(cols, coord[0])
+        row = np.searchsorted(rows, coord[1])
+        idx = col + self.n_grid * (row - 1)
+        idx = idx if idx > 0 else None
+        return idx
 
     class Meta:
         database = db
