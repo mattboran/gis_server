@@ -1,5 +1,5 @@
 import logging
-from typing import Tuple, List, Union
+from typing import Tuple, List, Union, Optional
 
 import geopy
 import geopy.distance
@@ -40,7 +40,7 @@ class Ray:
         """
         return self.ro + t * self.rd
 
-    def line_intersection(self, line: Tuple[np.array, np.array]) -> Union[float, None]:
+    def line_intersection(self, line: Tuple[np.array, np.array]) -> Optional[float]:
         """
         Perform intersection test between self and `line`
 
@@ -74,7 +74,7 @@ class GridPartition:
             self.extent = self.get_item_extent()
         self.buckets = self.partition()
 
-    def get_item_extent(self, delta: float=0.005):
+    def get_item_extent(self, delta: float=0.005) -> np.array:
         min_x = np.min(self.centers[0,])
         max_x = np.max(self.centers[0,])
         min_y = np.min(self.centers[1,])
@@ -87,13 +87,10 @@ class GridPartition:
                   max_y + y_delta * delta)
         return np.array(extent)
 
-    def partition(self):
+    def partition(self) -> List[List[Centerable]]:
         """
         Partition `self.items` into an `n` by `n` grid of buckets,
         where each bucket has some `items` in it.
-
-        Returns:
-            [[item]]: 1D list of [items] placed into their respective buckets.
         """
         cols = np.linspace(self.extent[0], self.extent[1], num=self.n)
         rows = np.linspace(self.extent[2], self.extent[3], num=self.n)
@@ -103,17 +100,14 @@ class GridPartition:
         c_rows = np.searchsorted(rows, self.centers[1,])
         return self.make_buckets(c_cols, c_rows)
 
-    def make_buckets(self, c, r) -> List[List[Centerable]]:
+    def make_buckets(self, c: np.array, r: np.array) -> List[List[Centerable]]:
         """
-        Helper method to create buckets out of items at indices created in 
+        Helper method to create buckets out of items at indices created in
         the `partition` method.
 
         Args:
             c (array): column index of `self.item[i]`
             r (array): `r`: row index of `self.item[i]`
-
-        Returns:
-            [[item]]: Flattened array of items placed into their respective buckets.
         """
         indices = c + self.n * (r - 1)
         buckets = [[] for _ in range(self.n**2)]
@@ -123,11 +117,11 @@ class GridPartition:
         logger.info("Created a grid of %s by %s", self.n, self.n)
         return buckets
 
-    def index_for_col_row(self, col, row) -> Union[int, None]:
+    def index_for_col_row(self, col: int, row: int) -> Optional[int]:
         idx = col + self.n * (row - 1)
         return idx if idx >= 0 else None
 
-    def index_for_coordinate(self, loc) -> Union[int, None]:
+    def index_for_coordinate(self, loc) -> Optional[int]:
         col, row = self.col_and_row_for_coordinate(loc)
         return self.index_for_col_row(col, row)
 

@@ -4,7 +4,7 @@ from typing import List, Tuple, Union
 import numpy as np
 import peewee as pw
 
-from main import db
+from db import db
 
 CoordinateList = List[Tuple[float, float]]
 
@@ -85,6 +85,11 @@ class Building(pw.Model):
             min_y = min(y, min_y)
             max_y = max(y, max_y)
         return min_x, min_y, max_x, max_y
+
+    @property
+    def lines_for_shape(self):
+        points = np.array(self.polygon_points).T
+        return [(points[:,i], points[:,i+1]) for i in range(points.shape[1]-1)]
 
     class Meta:
         database = db

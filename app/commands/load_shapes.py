@@ -5,7 +5,7 @@ from time import perf_counter
 
 import fiona
 
-from main import db
+from db import db
 from models import Building, Address, Bucket
 from geometry import Consolidator
 from commands.factory import Factory, BuildingShapeFactory, AddressedLocationFactory # pylint: disable=import-error
