@@ -6,7 +6,7 @@ from time import perf_counter
 import fiona
 
 from main import db
-from models import Building, Address
+from models import Building, Address, Bucket
 from geometry import Consolidator
 from commands.factory import Factory, BuildingShapeFactory, AddressedLocationFactory # pylint: disable=import-error
 
@@ -27,7 +27,7 @@ def load_shapefile(filename: str, factory: Factory):
 
 if __name__ == "__main__":
     db.connect()
-    db.create_tables([Address, Building])
+    db.create_tables([Address, Building, Bucket])
     n_grid = 150
     data_dir = os.path.join(os.getcwd(), 'gis_data')
     region = sys.argv[1]
@@ -44,4 +44,11 @@ if __name__ == "__main__":
     consolidator = Consolidator(building_models, address_models, n_grid=n_grid)
     consolidator.consolidate()
     with db.atomic():
-        Building.bulk_update(consolidator.buildings, fields=[Building.address_idx, Building.bucket_id], batch_size=100)
+        Building.bulk_update(
+            consolidator.buildings,
+            fields=[Building.address_idx, Building.bucket_id],
+            batch_size=100
+        )
+    extent = consolidator.buildings_grid.extent
+    coord_list = [(extent[0], extent[2]), (extent[1], extent[3])]
+    Bucket.create(region=region, extent=coord_list,n_grid=n_grid)

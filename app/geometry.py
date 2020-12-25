@@ -22,11 +22,7 @@ class Ray:
             loc (np.array): [lon, lat]
             heading (float): degrees heading
         """
-        def magnitude(vector):
-            return np.sqrt(np.dot(vector, vector))
-
-        def normalize(vector):
-            return vector/magnitude(vector)
+        self.ro = np.array(loc)
 
         start = geopy.Point(loc[1], loc[0])
         d = geopy.distance.distance(kilometers=1)
@@ -34,8 +30,9 @@ class Ray:
         np_point = np.array([point.longitude, point.latitude])
         locs = np.vstack((loc, np_point)).T
 
-        self.ro = np.array(loc)
-        self.rd = normalize(locs[:,1] - locs[:,0])
+        rd = locs[:,1] - locs[:,0]
+        magnitude = np.sqrt(np.dot(rd, rd))
+        self.rd = rd / magnitude
 
     def point_at(self, t: float) -> np.array:
         """
@@ -66,10 +63,10 @@ class Ray:
 
 class GridPartition:
 
-    def __init__(self, n: int, items: List[Centerable], extent=None):
+    def __init__(self, n: int, items: List[Centerable], extent: Union[np.array, None]=None):
         """
         Initialize an `n` by `n` grid with `items`.
-        
+
         Args:
             n (int): grid dimension
             items ([centered]): any class that implements property .center

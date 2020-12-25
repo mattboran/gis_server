@@ -15,6 +15,15 @@ class CoordinateListField(pw.TextField):
         return json.loads(value)
 
 
+class Bucket(pw.Model):
+    region = pw.TextField(primary_key=True)
+    extent = CoordinateListField(null=False)
+    n_grid = pw.IntegerField(null=False)
+
+    class Meta:
+        database = db
+
+
 class Address(pw.Model):
     idx = pw.IntegerField(primary_key=True)
     region = pw.TextField(null=False)
