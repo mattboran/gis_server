@@ -4,3 +4,4 @@ env/
 __pycache__
 app/gis_data/
 database.db*
+.gh_token
