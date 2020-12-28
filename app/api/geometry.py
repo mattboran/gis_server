@@ -5,7 +5,7 @@ import geopy
 import geopy.distance
 import numpy as np
 
-from models import Building, Address
+from .models import Building, Address
 
 Centerable = Union[Building, Address]
 

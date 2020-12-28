@@ -1,5 +1,7 @@
 env/
+.env
 .vscode
 __pycache__
 app/gis_data/
 database.db*
+pyrightconfig.json

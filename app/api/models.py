@@ -1,12 +1,13 @@
 import json
-from typing import List, Tuple, Union
+from typing import List, Tuple, Optional
 
 import numpy as np
 import peewee as pw
 
-from db import db
+from .db import db
 
 CoordinateList = List[Tuple[float, float]]
+
 
 class CoordinateListField(pw.TextField):
     def db_value(self, value: CoordinateList) -> str:
@@ -21,7 +22,7 @@ class Bucket(pw.Model):
     extent = CoordinateListField(null=False)
     n_grid = pw.IntegerField(null=False)
 
-    def index_for_coordinate(self, coord: Tuple[float, float]) -> Union[int, None]:
+    def index_for_coordinate(self, coord: Tuple[float, float]) -> Optional[int]:
         cols = np.linspace(self.extent[0][0], self.extent[1][0], num=self.n_grid)
         rows = np.linspace(self.extent[0][1], self.extent[1][1], num=self.n_grid)
         col = np.searchsorted(cols, coord[0])
@@ -29,6 +30,17 @@ class Bucket(pw.Model):
         idx = col + self.n_grid * (row - 1)
         idx = idx if idx > 0 else None
         return idx
+
+    def indices_surrounding_coordinate(self, coord: Tuple[float, float]) -> List[int]:
+        cols = np.linspace(self.extent[0][0], self.extent[1][0], num=self.n_grid)
+        rows = np.linspace(self.extent[0][1], self.extent[1][1], num=self.n_grid)
+        col = np.searchsorted(cols, coord[0])
+        row = np.searchsorted(rows, coord[1])
+        indices = []
+        for r in range(row-1, row+1):
+            for c in range(col-1, col+1):
+                indices.append(c + self.n_grid * (r - 1))
+        return [idx for idx in indices if idx >= 0]
 
     class Meta:
         database = db
@@ -66,6 +78,12 @@ class Building(pw.Model):
     polygon_points = CoordinateListField(null=False)
     bucket_id = pw.IntegerField(null=True)
     address_idx = pw.ForeignKeyField(Address, backref='address', null=True)
+
+    @staticmethod
+    def get_buildings_for_bucket_indices(indices):
+        return (Building.select(Building.idx, Building.polygon_points, Address.full_address)
+                        .join(Address, attr='address')
+                        .where(Building.bucket_id << indices))
 
     @property
     def center(self):

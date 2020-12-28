@@ -5,10 +5,10 @@ from time import perf_counter
 
 import fiona
 
-from db import db
-from models import Building, Address, Bucket
-from geometry import Consolidator
-from commands.factory import Factory, BuildingShapeFactory, AddressedLocationFactory # pylint: disable=import-error
+from app.api.db import db
+from app.api.models import Building, Address, Bucket
+from app.api.geometry import Consolidator
+from app.commands.factory import Factory, BuildingShapeFactory, AddressedLocationFactory
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
