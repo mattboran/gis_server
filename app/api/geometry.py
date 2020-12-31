@@ -9,6 +9,8 @@ from .models import Building, Address
 
 Centerable = Union[Building, Address]
 
+LAT_LON_TO_M = 111_139
+
 logger = logging.getLogger(__name__)
 
 class Ray:
@@ -17,10 +19,6 @@ class Ray:
         """
         Initialize a ray centered at the viewer, with normalized
         direction based on heading in a lat/lon coordinate system.
-
-        Args:
-            loc (np.array): [lon, lat]
-            heading (float): degrees heading
         """
         self.ro = np.array(loc)
 

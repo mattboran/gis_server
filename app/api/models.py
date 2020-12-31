@@ -81,7 +81,9 @@ class Building(pw.Model):
 
     @staticmethod
     def get_buildings_for_bucket_indices(indices):
-        return (Building.select(Building.idx, Building.polygon_points, Address.full_address)
+        return (Building.select(Building.idx, Building.polygon_points, Building.height,
+                                Building.ground_elevation, Building.building_type,
+                                Address.full_address, Address.coord)
                         .join(Address, attr='address')
                         .where(Building.bucket_id << indices))
 
