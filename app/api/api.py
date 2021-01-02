@@ -40,7 +40,7 @@ class IntersectionResult(BaseModel):
     t: float
     dist: float
     address: str
-    point: PointOut
+    point: CoordinateOut
 
 
 class IntersectionOut(BaseModel):
@@ -59,8 +59,8 @@ async def get_bucket(region: str, lat: float, lon: float):
         o_lon, o_lat = b.origin
         out = BucketOut(idx=b.idx,
                         address=b.address.full_address,
-                        height=b.height,
-                        ground_elevation=b.ground_elevation,
+                        height=b.height * geom.FT_TO_M,
+                        ground_elevation=b.ground_elevation * geom.FT_TO_M,
                         building_type=b.building_type,
                         center=CoordinateOut(latitude=c_lat, longitude=c_lon),
                         origin=CoordinateOut(latitude=o_lat, longitude=o_lon),
@@ -88,13 +88,12 @@ async def get_intersection(region: str, lat: float, lon: float, heading: float):
     pts = [ray.point_at(t) for t in t_vals]
     result = []
     for i, index in enumerate(indices):
-        result.append({
-            'idx': buildings[index].idx,
-            't': t_vals[i],
-            'dist': t_vals[i] * geom.LAT_LON_TO_M,
-            'address': buildings[index].address.full_address,
-            'point': CoordinateOut(latitude=pts[i][1], longitude=pts[i][0]).dict()
-        })
+        out = IntersectionResult(idx=buildings[index].idx,
+                                 t=t_vals[i],
+                                 dist=t_vals[i] * geom.LAT_LON_TO_M,
+                                 address=buildings[index].address.full_address,
+                                 point=CoordinateOut(latitude=pts[i][1], longitude=pts[i][0]))
+        result.append(out.dict())
     return {
         'count': len(result),
         'result': result
