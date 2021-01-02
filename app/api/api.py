@@ -9,9 +9,14 @@ from .models import Bucket, Building, CoordinateList
 
 router = APIRouter(dependencies=[Depends(get_token)])
 
-class PointOut(BaseModel):
+class CoordinateOut(BaseModel):
     latitude: float
     longitude: float
+
+
+class PointOut(BaseModel):
+    x: float
+    y: float
 
 
 class BucketOut(BaseModel):
@@ -20,7 +25,8 @@ class BucketOut(BaseModel):
     height: Optional[float]
     ground_elevation: Optional[float]
     building_type: Optional[str]
-    center: PointOut
+    center: CoordinateOut
+    origin: CoordinateOut
     polygon: List[PointOut]
 
 
@@ -42,12 +48,6 @@ class IntersectionOut(BaseModel):
     result: List[IntersectionResult]
 
 
-def point_to_dict(point: Tuple[float, float]) -> Dict[str, float]:
-    return {'latitude': point[1], 'longitude': point[0]}
-
-def points_to_dict(points: CoordinateList) -> List[Dict[str, float]]:
-    return [point_to_dict(p) for p in points]
-
 @router.get('/bucket', response_model=BucketResult)
 async def get_bucket(region: str, lat: float, lon: float):
     bucket = Bucket.get(Bucket.region == region)
@@ -55,12 +55,17 @@ async def get_bucket(region: str, lat: float, lon: float):
     buildings = Building.get_buildings_for_bucket_indices(indices)
     result = []
     for b in buildings:
-        result.append({
-            'idx': b.idx,
-            'address': b.address.full_address,
-            'center': point_to_dict(b.address.coord[0]),
-            'polygon': points_to_dict(b.polygon_points)
-        })
+        c_lon, c_lat = b.address.coord[0]
+        o_lon, o_lat = b.origin
+        out = BucketOut(idx=b.idx,
+                        address=b.address.full_address,
+                        height=b.height,
+                        ground_elevation=b.ground_elevation,
+                        building_type=b.building_type,
+                        center=CoordinateOut(latitude=c_lat, longitude=c_lon),
+                        origin=CoordinateOut(latitude=o_lat, longitude=o_lon),
+                        polygon=[PointOut(x=p[0], y=p[1]) for p in b.points_in_local_coords])
+        result.append(out.dict())
     return {
         'count': len(result),
         'result': result
@@ -88,7 +93,7 @@ async def get_intersection(region: str, lat: float, lon: float, heading: float):
             't': t_vals[i],
             'dist': t_vals[i] * geom.LAT_LON_TO_M,
             'address': buildings[index].address.full_address,
-            'point': point_to_dict(pts[i])
+            'point': CoordinateOut(latitude=pts[i][1], longitude=pts[i][0]).dict()
         })
     return {
         'count': len(result),
