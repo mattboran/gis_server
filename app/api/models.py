@@ -1,8 +1,11 @@
 import json
 from typing import List, Tuple, Optional
+from functools import cached_property
 
 import numpy as np
 import peewee as pw
+from geopy import Point
+from geopy.distance import great_circle
 
 from .db import db
 
@@ -81,19 +84,21 @@ class Building(pw.Model):
 
     @staticmethod
     def get_buildings_for_bucket_indices(indices):
-        return (Building.select(Building.idx, Building.polygon_points, Address.full_address)
+        return (Building.select(Building.idx, Building.polygon_points, Building.height,
+                                Building.ground_elevation, Building.building_type,
+                                Address.full_address, Address.coord)
                         .join(Address, attr='address')
                         .where(Building.bucket_id << indices))
 
-    @property
-    def center(self):
+    @cached_property
+    def center(self) -> Tuple[float, float]:
         min_x, min_y, max_x, max_y = self.bbox
         result_x = (min_x + max_x) / 2.0
         result_y = (min_y + max_y) / 2.0
         return result_x, result_y
 
-    @property
-    def bbox(self):
+    @cached_property
+    def bbox(self) -> Tuple[float, float, float, float]:
         min_x, min_y = 100000.0, 100000.0
         max_x, max_y = -100000.0, -100000.0
         for point in self.polygon_points:
@@ -104,10 +109,35 @@ class Building(pw.Model):
             max_y = max(y, max_y)
         return min_x, min_y, max_x, max_y
 
-    @property
-    def lines_for_shape(self):
+    @cached_property
+    def lines_for_shape(self) -> List[Tuple[np.array, np.array]]:
         points = np.array(self.polygon_points).T
         return [(points[:,i], points[:,i+1]) for i in range(points.shape[1]-1)]
+
+    @cached_property
+    def xy_extent_in_meters(self) -> np.array:
+        min_x, min_y, max_x, max_y = self.bbox
+        origin = Point(latitude=min_y, longitude=min_x)
+        max_x_point = Point(latitude=min_y, longitude=max_x)
+        max_y_point = Point(latitude=max_y, longitude=min_x)
+        x_distance = great_circle(origin, max_x_point).meters
+        y_distance = great_circle(origin, max_y_point).meters
+        return np.array((x_distance, y_distance))
+
+    @cached_property
+    def origin(self) -> Tuple[float, float]:
+        x, y, _, _ = self.bbox
+        return x, y
+
+    @cached_property
+    def points_in_local_coords(self) -> List[Tuple[float, float]]:
+        min_x, min_y, max_x, max_y = self.bbox
+        min_point = np.array((min_x, min_y))
+        max_point = np.array((max_x, max_y))
+        extent = max_point - min_point
+        indep_var = (np.array(self.polygon_points) - min_point) / extent
+        res = indep_var * self.xy_extent_in_meters
+        return [tuple(x) for x in res]
 
     class Meta:
         database = db
