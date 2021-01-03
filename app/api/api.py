@@ -1,11 +1,11 @@
-from typing import List, Dict, Tuple, Optional
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 import api.geometry as geom
 from .dependencies import get_token
-from .models import Bucket, Building, CoordinateList
+from .models import Bucket, Building
 
 router = APIRouter(dependencies=[Depends(get_token)])
 
@@ -88,12 +88,11 @@ async def get_intersection(region: str, lat: float, lon: float, heading: float):
     pts = [ray.point_at(t) for t in t_vals]
     result = []
     for i, index in enumerate(indices):
-        out = IntersectionResult(idx=buildings[index].idx,
-                                 t=t_vals[i],
-                                 dist=t_vals[i] * geom.LAT_LON_TO_M,
-                                 address=buildings[index].address.full_address,
-                                 point=CoordinateOut(latitude=pts[i][1], longitude=pts[i][0]))
-        result.append(out.dict())
+        result.append(IntersectionResult(idx=buildings[index].idx,
+                                         t=t_vals[i],
+                                         dist=t_vals[i] * geom.LAT_LON_TO_M,
+                                         address=buildings[index].address.full_address,
+                                         point=CoordinateOut(latitude=pts[i][1], longitude=pts[i][0])).dict())
     return {
         'count': len(result),
         'result': result
