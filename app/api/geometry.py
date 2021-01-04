@@ -112,7 +112,7 @@ class GridPartition:
         buckets = [[] for _ in range(self.n**2)]
         for item, idx in zip(self.items, indices):
             buckets[idx].append(item)
-            item.bucket_id = idx
+            item.bucket_idx = idx
         logger.info("Created a grid of %s by %s", self.n, self.n)
         return buckets
 

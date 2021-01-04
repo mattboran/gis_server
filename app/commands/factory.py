@@ -1,15 +1,17 @@
+from typing import Any, Dict, Optional
+
 class Factory: # pylint: disable=too-few-public-methods    
 
     def __init__(self, region: str):
         self.region = region
 
-    def create(self, data:dict, idx: int):
+    def create(self, data:dict, idx: int) -> Dict[str, Any]:
         return getattr(self, f'create_{self.region}')(data, idx)
 
 
 class BuildingShapeFactory(Factory):
 
-    def create_denver(self, data: dict, idx: int):
+    def create_denver(self, data: dict, idx: int) -> Optional[Dict[str, Any]]:
         properties = data['properties']
         building_type = properties['BLDG_TYPE']
         if building_type == 'Garage/Shed':
@@ -25,7 +27,7 @@ class BuildingShapeFactory(Factory):
 
 class AddressedLocationFactory(Factory):
 
-    def create_denver(self, data: dict, idx: int):
+    def create_denver(self, data: dict, idx: int) -> Optional[Dict[str, Any]]:
         properties = data['properties']
         building_type = properties['BUILDING_T']
         if building_type == 'Garage/Shed':

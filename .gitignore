@@ -6,3 +6,4 @@ app/gis_data/
 database.db*
 pyrightconfig.json
 .gh_token
+debug/

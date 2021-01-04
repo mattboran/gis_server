@@ -28,6 +28,7 @@ class BucketOut(BaseModel):
     center: CoordinateOut
     origin: CoordinateOut
     polygon: List[PointOut]
+    polygon_coords: List[CoordinateOut]
 
 
 class BucketResult(BaseModel):
@@ -57,6 +58,7 @@ async def get_bucket(region: str, lat: float, lon: float):
     for b in buildings:
         c_lon, c_lat = b.address.coord[0]
         o_lon, o_lat = b.origin
+        poly_coords = [CoordinateOut(latitude=p[1], longitude=p[0]) for p in b.polygon_points]
         out = BucketOut(idx=b.idx,
                         address=b.address.full_address,
                         height=b.height * geom.FT_TO_M,
@@ -64,7 +66,8 @@ async def get_bucket(region: str, lat: float, lon: float):
                         building_type=b.building_type,
                         center=CoordinateOut(latitude=c_lat, longitude=c_lon),
                         origin=CoordinateOut(latitude=o_lat, longitude=o_lon),
-                        polygon=[PointOut(x=p[0], y=p[1]) for p in b.points_in_local_coords])
+                        polygon=[PointOut(x=p[0], y=p[1]) for p in b.points_in_local_coords],
+                        polygon_coords=poly_coords)
         result.append(out.dict())
     return {
         'count': len(result),

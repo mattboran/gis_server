@@ -40,8 +40,8 @@ class Bucket(pw.Model):
         col = np.searchsorted(cols, coord[0])
         row = np.searchsorted(rows, coord[1])
         indices = []
-        for r in range(row-1, row+1):
-            for c in range(col-1, col+1):
+        for r in range(row-1, row+2):
+            for c in range(col-1, col+2):
                 indices.append(c + self.n_grid * (r - 1))
         return [idx for idx in indices if idx >= 0]
 
@@ -63,6 +63,7 @@ class Address(pw.Model):
     unit_identifier = pw.TextField(null=True)
     full_address = pw.TextField(null=False)
     coord = CoordinateListField(null=False)
+    bucket_idx = pw.IntegerField(null=True)
 
     @property
     def center(self):
@@ -79,7 +80,7 @@ class Building(pw.Model):
     ground_elevation = pw.IntegerField(null=True)
     building_type = pw.TextField(null=False)
     polygon_points = CoordinateListField(null=False)
-    bucket_id = pw.IntegerField(null=True)
+    bucket_idx = pw.IntegerField(null=True)
     address_idx = pw.ForeignKeyField(Address, backref='address', null=True)
 
     @staticmethod
@@ -88,7 +89,7 @@ class Building(pw.Model):
                                 Building.ground_elevation, Building.building_type,
                                 Address.full_address, Address.coord)
                         .join(Address, attr='address')
-                        .where(Building.bucket_id << indices))
+                        .where(Building.bucket_idx << indices))
 
     @cached_property
     def center(self) -> Tuple[float, float]:
