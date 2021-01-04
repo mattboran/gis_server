@@ -69,7 +69,7 @@ if __name__ == "__main__":
     with db.atomic():
         Address.bulk_update(
             consolidator.addresses,
-            fields=[Address.bucket_idx],
+            fields=[Address.building_idx, Address.bucket_idx],
             batch_size=100
         )
     logger.info("Updated %s addresses in %s.", len(consolidator.addresses), perf_counter() - start_time)

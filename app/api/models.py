@@ -64,7 +64,7 @@ class Address(pw.Model):
     full_address = pw.TextField(null=False)
     coord = CoordinateListField(null=False)
     bucket_idx = pw.IntegerField(null=True)
-    # building_idx = pw.ForeignKeyField(Building, backref='building', null=True)
+    building_idx = pw.DeferredForeignKey('Building', null=True)
 
     @property
     def center(self):

@@ -164,7 +164,7 @@ class Consolidator:
             address_bucket = self.address_grid.buckets[i]
             if not shape_bucket or not address_bucket:
                 continue
-         
+
             addresses_for_building = [[] for _ in shape_bucket]
             for j, address in enumerate(address_bucket):
                 point = np.array(address.center)
@@ -173,5 +173,8 @@ class Consolidator:
                 addresses_for_building[np.argmin(ds)].append(j)
             addr_indices = [addresses_for_building[i] for i in range(len(shape_bucket))]
             for j, building in enumerate(shape_bucket):
-                if addr_indices[j]:
-                    building.address_idx = address_bucket[addr_indices[j][0]].idx
+                indices = addr_indices[j]
+                if indices:
+                    building.address_idx = address_bucket[indices[0]].idx
+                    for k in indices:
+                        address_bucket[k].building_idx = building.idx
