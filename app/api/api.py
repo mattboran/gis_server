@@ -1,3 +1,5 @@
+import logging
+from collections import Counter
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends
@@ -8,6 +10,8 @@ from .dependencies import get_token
 from .models import Bucket, Building, Address
 
 router = APIRouter(dependencies=[Depends(get_token)])
+
+logger = logging.getLogger(__name__)
 
 class CoordinateOut(BaseModel):
     latitude: float
@@ -37,8 +41,8 @@ class BucketOut(BaseModel):
 
 
 class AddressResult(BaseModel):
-    building_type: Optional[str]
     address: str
+    building_idx: Optional[int]
     coord: CoordinateOut
 
 
@@ -89,15 +93,38 @@ async def get_bucket(region: str, lat: float, lon: float):
 async def get_addresses(region: str, lat: float, lon: float):
     indices = (Bucket.get(Bucket.region == region)
                      .indices_surrounding_coordinate((lon, lat)))
-    addresses = (Address.select(Address.building_type, Address.full_address, Address.coord)
+    addresses = (Address.select(Address.building_type, Address.address_1,
+                                Address.street_name, Address.coord,
+                                Address.post_type, Address.predirective,
+                                Address.region, Address.building_idx)
                         .where(Address.bucket_idx << indices))
-    result = [AddressResult(building_type=a.building_type,
-                            address=a.full_address,
-                            coord=CoordinateOut(latitude=a.coord[0][1], longitude=a.coord[0][0]))
-              for a in addresses]
+    result = dict()
+    for address in addresses:
+        predirective = f" {address.predirective} " if address.predirective else ""
+        street = address.address_1 + predirective + address.street_name + " " + address.post_type
+        full_address = street + ", " + address.region
+        coord = CoordinateOut(latitude=address.coord[0][1], longitude=address.coord[0][0])
+        addr = AddressResult(address=full_address, coord=coord, building_idx=address.building_idx)
+        if result.get(full_address):
+            result[full_address].append(addr)
+        else:
+            result[full_address] = [addr]
+    
+    # Group multiple addresses that share the same street together and average their center point
+    for key, value in result.items():
+        coords = [val.coord for val in value]
+        # The most common building_idx is most likely the correct one:
+        try:
+            building_idx = Counter([v.building_idx for v in value]).most_common(1).pop()[0]
+        except IndexError:
+            building_idx = None
+        latitude = sum([c.latitude for c in coords]) / float(len(coords))
+        longitude = sum([c.longitude for c in coords]) / float(len(coords))
+        coord = CoordinateOut(latitude=latitude, longitude=longitude)
+        result[key] = AddressResult(address=key, coord=coord, building_idx=building_idx).dict()
     return {
         'count': len(result),
-        'result': result
+        'result': list(result.values())
     }
 
 @router.get('/intersect', response_model=IntersectionOut)

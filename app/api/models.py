@@ -64,10 +64,10 @@ class Address(pw.Model):
     full_address = pw.TextField(null=False)
     coord = CoordinateListField(null=False)
     bucket_idx = pw.IntegerField(null=True)
-    building_idx = pw.DeferredForeignKey('Building', null=True)
+    building_idx = pw.IntegerField(null=True)
 
     @property
-    def center(self):
+    def center(self) -> Tuple[float, float]:
         return self.coord[0]
 
     class Meta:
@@ -82,14 +82,14 @@ class Building(pw.Model):
     building_type = pw.TextField(null=False)
     polygon_points = CoordinateListField(null=False)
     bucket_idx = pw.IntegerField(null=True)
-    address_idx = pw.ForeignKeyField(Address, backref='address', null=True)
+    address_idx = pw.IntegerField(null=True)
 
     @staticmethod
     def get_buildings_for_bucket_indices(indices):
         return (Building.select(Building.idx, Building.polygon_points, Building.height,
                                 Building.ground_elevation, Building.building_type,
                                 Address.full_address, Address.coord)
-                        .join(Address, attr='address')
+                        .join(Address, attr='address', on=(Building.idx==Address.building_idx))
                         .where(Building.bucket_idx << indices))
 
     @cached_property
