@@ -7,9 +7,9 @@ from time import perf_counter
 import fiona
 
 from api.db import db
-from api.models import Building, Address, Bucket
+from api.models import Building, Address, Bucket, Street
 from api.geometry import Consolidator
-from commands.factory import Factory, BuildingShapeFactory, AddressedLocationFactory
+from commands.factory import Factory, BuildingShapeFactory, AddressedLocationFactory, StreetFactory
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
@@ -45,14 +45,25 @@ def create_buildings_and_addresses(buildings: List[Building], addresses: List[Ad
         Building.bulk_create(buildings, batch_size=100)
     logger.info("Created %s buildings: %s s.", len(building_models), perf_counter() - start)
 
+def create_streets(area: str) -> List[Street]:
+    factory = StreetFactory(region)
+    streets = load_shapefile(os.path.join(data_dir, f'{area}_streets.shp'), factory)
+    streets = [Street(**street) for street in streets]
+    start = perf_counter()
+    with db.atomic():
+        Street.bulk_create(streets, batch_size=100)
+    logger.info("Created %s streets: %s s.", len(streets), perf_counter() - start)
+    return streets
+
 if __name__ == "__main__":
     db.connect()
-    db.create_tables([Address, Building, Bucket])
+    db.create_tables([Address, Building, Bucket, Street])
     n_grid = 200
     data_dir = os.path.join(os.getcwd(), 'gis_data')
     region = sys.argv[1]
     building_models, address_models = generate_buildings_and_addresses(region)
     create_buildings_and_addresses(building_models, address_models)
+    street_models = create_streets(region)
     start_time = perf_counter()
     consolidator = Consolidator(building_models, address_models, n_grid=n_grid)
     consolidator.consolidate()

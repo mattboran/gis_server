@@ -68,7 +68,7 @@ class IntersectionOut(BaseModel):
 async def get_bucket(region: str, lat: float, lon: float):
     bucket = Bucket.get(Bucket.region == region)
     indices = bucket.indices_surrounding_coordinate((lon, lat))
-    buildings = Building.get_buildings_for_bucket_indices(indices)
+    buildings = list(set(Building.get_buildings_for_bucket_indices(indices)))
     result = []
     for b in buildings:
         c_lon, c_lat = b.address.coord[0]
@@ -93,11 +93,9 @@ async def get_bucket(region: str, lat: float, lon: float):
 async def get_addresses(region: str, lat: float, lon: float):
     indices = (Bucket.get(Bucket.region == region)
                      .indices_surrounding_coordinate((lon, lat)))
-    addresses = (Address.select(Address.building_type, Address.address_1,
-                                Address.street_name, Address.coord,
-                                Address.post_type, Address.predirective,
-                                Address.region, Address.building_idx)
-                        .where(Address.bucket_idx << indices))
+    addresses = (Address.select()
+                        .where(Address.bucket_idx << indices)
+                        .join(Building, attr='building', on=(Building.idx == Address.building_idx)))
     result = dict()
     for address in addresses:
         predirective = f" {address.predirective} " if address.predirective else ""
@@ -109,7 +107,6 @@ async def get_addresses(region: str, lat: float, lon: float):
             result[full_address].append(addr)
         else:
             result[full_address] = [addr]
-    
     # Group multiple addresses that share the same street together and average their center point
     for key, value in result.items():
         coords = [val.coord for val in value]

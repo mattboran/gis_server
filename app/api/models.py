@@ -65,6 +65,7 @@ class Address(pw.Model):
     coord = CoordinateListField(null=False)
     bucket_idx = pw.IntegerField(null=True)
     building_idx = pw.IntegerField(null=True)
+    street_idx = pw.IntegerField(null=True)
 
     @property
     def center(self) -> Tuple[float, float]:
@@ -82,6 +83,7 @@ class Building(pw.Model):
     building_type = pw.TextField(null=False)
     polygon_points = CoordinateListField(null=False)
     bucket_idx = pw.IntegerField(null=True)
+    # TODO: - This can probably be removed
     address_idx = pw.IntegerField(null=True)
 
     @staticmethod
@@ -140,6 +142,24 @@ class Building(pw.Model):
         indep_var = (np.array(self.polygon_points) - min_point) / extent
         res = indep_var * self.xy_extent_in_meters
         return [tuple(x) for x in res]
+
+    class Meta:
+        database = db
+
+
+class Street(pw.Model):
+    idx = pw.IntegerField(primary_key=True)
+    region = pw.TextField(primary_key=True)
+    l_min_addr = pw.IntegerField(null=True)
+    l_max_addr = pw.IntegerField(null=True)
+    r_min_addr = pw.IntegerField(null=True)
+    r_max_addr = pw.IntegerField(null=True)
+    prefix = pw.TextField(null=True)
+    name = pw.TextField()
+    street_type = pw.TextField(null=True)
+    suffix = pw.TextField(null=True)
+    fullname = pw.TextField()
+    coords = CoordinateListField()
 
     class Meta:
         database = db
