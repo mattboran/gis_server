@@ -9,7 +9,7 @@ from geopy.distance import great_circle
 from shapely.geometry import Polygon
 
 from api.db import db
-from api.geometry import LAT_LON_TO_M
+from api.geometry import minimum_bounding_rectangle
 
 CoordinateList = List[Tuple[float, float]]
 
@@ -153,6 +153,10 @@ class Building(pw.Model):
             tolerance = min((max_x - min_x), (max_y - min_y)) / 5.0
             return points.simplify(tolerance, preserve_topology=False)
         return points
+
+    @cached_property
+    def min_bounding_rect(self) -> CoordinateList:
+        return minimum_bounding_rectangle(self.polygon_points)
 
     class Meta:
         database = db
