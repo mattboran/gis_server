@@ -44,6 +44,7 @@ class AddressedLocationFactory(Factory):
             'predirective': properties['PREDIRECTI'],
             'postdirective': properties['POSTDIRECT'],
             'street_name': properties['STREET_NAM'],
+            'post_type': properties['POSTTYPE'],
             'full_address': properties['FULL_ADDRE'],
             'coord': coord
         }
@@ -54,6 +55,9 @@ class StreetFactory(Factory):
     def create_denver(self, data: dict, idx: int) -> Optional[Dict[str, Any]]:
         properties = data['properties']
         coords = data['geometry']['coordinates']
+        fullname = properties['FULLNAME']
+        if not coords or not fullname:
+            return None
         return {
             'idx': idx,
             'region': self.region,
@@ -65,6 +69,6 @@ class StreetFactory(Factory):
             'name': properties['NAME'],
             'street_type': properties['TYPE'],
             'suffix': properties['SUFFIX'],
-            'full_name': properties['FULLNAME'],
+            'full_name': fullname,
             'coords': coords
         }

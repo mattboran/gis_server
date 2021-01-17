@@ -22,8 +22,8 @@ class CoordinateListField(pw.TextField):
 
 class Bucket(pw.Model):
     region = pw.TextField(primary_key=True)
-    extent = CoordinateListField(null=False)
-    n_grid = pw.IntegerField(null=False)
+    extent = CoordinateListField()
+    n_grid = pw.IntegerField()
 
     def index_for_coordinate(self, coord: Tuple[float, float]) -> Optional[int]:
         cols = np.linspace(self.extent[0][0], self.extent[1][0], num=self.n_grid)
@@ -51,9 +51,9 @@ class Bucket(pw.Model):
 
 class Address(pw.Model):
     idx = pw.IntegerField(primary_key=True)
-    region = pw.TextField(null=False)
+    region = pw.TextField()
     building_type = pw.TextField(null=True)
-    address_1 = pw.TextField(null=True)
+    address_1 = pw.TextField(null=True) # TODO: - IntegerField
     address_2 = pw.TextField(null=True)
     predirective = pw.TextField(null=True)
     postdirective = pw.TextField(null=True)
@@ -61,8 +61,8 @@ class Address(pw.Model):
     post_type = pw.TextField(null=True)
     unit_type = pw.TextField(null=True)
     unit_identifier = pw.TextField(null=True)
-    full_address = pw.TextField(null=False)
-    coord = CoordinateListField(null=False)
+    full_address = pw.TextField()
+    coord = CoordinateListField()
     bucket_idx = pw.IntegerField(null=True)
     building_idx = pw.IntegerField(null=True)
     street_idx = pw.IntegerField(null=True)
@@ -149,7 +149,7 @@ class Building(pw.Model):
 
 class Street(pw.Model):
     idx = pw.IntegerField(primary_key=True)
-    region = pw.TextField(primary_key=True)
+    region = pw.TextField(null=False)
     l_min_addr = pw.IntegerField(null=True)
     l_max_addr = pw.IntegerField(null=True)
     r_min_addr = pw.IntegerField(null=True)
@@ -158,7 +158,7 @@ class Street(pw.Model):
     name = pw.TextField()
     street_type = pw.TextField(null=True)
     suffix = pw.TextField(null=True)
-    fullname = pw.TextField()
+    full_name = pw.TextField()
     coords = CoordinateListField()
 
     class Meta:

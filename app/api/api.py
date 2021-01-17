@@ -1,3 +1,4 @@
+import json
 import logging
 from collections import Counter
 from typing import List, Optional
@@ -7,7 +8,7 @@ from pydantic import BaseModel
 
 import api.geometry as geom
 from .dependencies import get_token
-from .models import Bucket, Building, Address
+from .models import Bucket, Building, Address, Street
 
 router = APIRouter(dependencies=[Depends(get_token)])
 
@@ -42,8 +43,16 @@ class BucketOut(BaseModel):
 
 class AddressResult(BaseModel):
     address: str
-    building_idx: Optional[int]
     coord: CoordinateOut
+    polygon_coords: Optional[List[CoordinateOut]]
+    street_coords: Optional[List[CoordinateOut]]
+
+    @property
+    def hashable_polygon_coords(self) -> Optional[str]:
+        if not self.polygon_coords:
+            return None
+        polygons = [json.dumps(p.dict()) for p in self.polygon_coords]
+        return "[" + ",".join(polygons) + "]"
 
 
 class AddressOut(BaseModel):
@@ -93,32 +102,40 @@ async def get_bucket(region: str, lat: float, lon: float):
 async def get_addresses(region: str, lat: float, lon: float):
     indices = (Bucket.get(Bucket.region == region)
                      .indices_surrounding_coordinate((lon, lat)))
-    addresses = (Address.select()
+    addresses = (Address.select(Address.predirective, Address.address_1, Address.street_name, Address.post_type, Address.region,
+                                Address.coord, Address.building_idx, Address.street_idx, Building.idx, Building.polygon_points,
+                                Street.idx, Street.coords)
                         .where(Address.bucket_idx << indices)
-                        .join(Building, attr='building', on=(Building.idx == Address.building_idx)))
+                        .join(Building, attr='building', on=(Building.idx == Address.building_idx))
+                        .switch(Address)
+                        .join(Street, attr='street', on=(Street.idx == Address.street_idx)))
     result = dict()
     for address in addresses:
         predirective = f" {address.predirective} " if address.predirective else ""
         street = address.address_1 + predirective + address.street_name + " " + address.post_type
         full_address = street + ", " + address.region
         coord = CoordinateOut(latitude=address.coord[0][1], longitude=address.coord[0][0])
-        addr = AddressResult(address=full_address, coord=coord, building_idx=address.building_idx)
-        if result.get(full_address):
+        polygon_coords = [CoordinateOut(latitude=p[1], longitude=p[0]) for p in address.building.polygon_points]
+        street_coords = [CoordinateOut(latitude=p[1], longitude=p[0]) for p in address.street.coords if address.street]
+        addr = AddressResult(address=full_address, coord=coord, polygon_coords=polygon_coords, street_coords=street_coords)
+        if full_address in result:
             result[full_address].append(addr)
         else:
             result[full_address] = [addr]
-    # Group multiple addresses that share the same street together and average their center point
-    for key, value in result.items():
-        coords = [val.coord for val in value]
-        # The most common building_idx is most likely the correct one:
+    
+    for full_address, address_models in result.items():
+        coords = [addr.coord for addr in address_models]
+        # The most common polygon is most likely the correct one:
         try:
-            building_idx = Counter([v.building_idx for v in value]).most_common(1).pop()[0]
+            polygons = [addr.hashable_polygon_coords for idx, addr in enumerate(address_models)]
+            polygon = json.loads(Counter(polygons).most_common(1).pop()[0])
         except IndexError:
-            building_idx = None
+            polygon = None
         latitude = sum([c.latitude for c in coords]) / float(len(coords))
         longitude = sum([c.longitude for c in coords]) / float(len(coords))
         coord = CoordinateOut(latitude=latitude, longitude=longitude)
-        result[key] = AddressResult(address=key, coord=coord, building_idx=building_idx).dict()
+        street_coords = address_models[0].street_coords
+        result[full_address] = AddressResult(address=full_address, coord=coord, polygon_coords=polygon, street_coords=street_coords)
     return {
         'count': len(result),
         'result': list(result.values())

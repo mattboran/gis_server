@@ -1,29 +1,27 @@
+import json
 import logging
 from typing import Tuple, List
 import os
 import sys
-from time import perf_counter
 
 import fiona
 
 from api.db import db
 from api.models import Building, Address, Bucket, Street
-from api.geometry import Consolidator
 from commands.factory import Factory, BuildingShapeFactory, AddressedLocationFactory, StreetFactory
+from commands.util import Timer
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 
 
 def load_shapefile(filename: str, factory: Factory):
-    start = perf_counter()
-    with fiona.open(filename, 'r') as source:
-        item_list = list(source)
-        logger.info("Reading %s: %s s", filename, perf_counter() - start)
-    start = perf_counter()
-    items = [factory.create(item, idx=idx) for idx, item in enumerate(item_list)]
-    items = [item for item in items if item]
-    logger.info("Parsing %s entries: %s s.", len(items), perf_counter() - start)
+    with Timer(f"Reading {filename}"):
+        with fiona.open(filename, 'r') as source:
+            item_list = list(source)
+    with Timer("Parsing items"):
+        items = [factory.create(item, idx=idx) for idx, item in enumerate(item_list)]
+        items = [item for item in items if item]
     return items
 
 def generate_buildings_and_addresses(area: str) -> Tuple[List[Building], List[Address]]:
@@ -31,60 +29,48 @@ def generate_buildings_and_addresses(area: str) -> Tuple[List[Building], List[Ad
     address_factory = AddressedLocationFactory(region)
     buildings = load_shapefile(os.path.join(data_dir, f'{area}.shp'), building_factory)
     addresses = load_shapefile(os.path.join(data_dir, f'{area}_addresses.shp'), address_factory)
-    buildings = [Building(**building) for building in buildings]
+    buildings = get_unique_buildings([Building(**building) for building in buildings])
     addresses = [Address(**address) for address in addresses]
     return buildings, addresses
 
+def get_unique_buildings(buildings: List[Building]) -> List[Building]:
+    coord_set = set()
+    result = []
+    for building in buildings:
+        key = json.dumps(building.polygon_points)
+        if key not in coord_set:
+            result.append(building)
+            coord_set.add(key)
+    return result
+
 def create_buildings_and_addresses(buildings: List[Building], addresses: List[Address]):
-    start = perf_counter()
-    with db.atomic():
-        Address.bulk_create(addresses, batch_size=100)
-    logger.info("Created %s addresses: %s s.", len(address_models), perf_counter() - start)
-    start = perf_counter()
-    with db.atomic():
-        Building.bulk_create(buildings, batch_size=100)
-    logger.info("Created %s buildings: %s s.", len(building_models), perf_counter() - start)
+    with Timer("Creating addresses"):
+        with db.atomic():
+            Address.bulk_create(addresses, batch_size=100)
+    logger.info("Created %s addresses", len(address_models))
+    with Timer("Creating buildings"):
+        with db.atomic():
+            Building.bulk_create(buildings, batch_size=100)
+    logger.info("Created %s buildings", len(building_models))
 
 def create_streets(area: str) -> List[Street]:
-    factory = StreetFactory(region)
-    streets = load_shapefile(os.path.join(data_dir, f'{area}_streets.shp'), factory)
-    streets = [Street(**street) for street in streets]
-    start = perf_counter()
-    with db.atomic():
-        Street.bulk_create(streets, batch_size=100)
-    logger.info("Created %s streets: %s s.", len(streets), perf_counter() - start)
+    with Timer("Creating streets"):
+        factory = StreetFactory(region)
+        streets = load_shapefile(os.path.join(data_dir, f'{area}_street.shp'), factory)
+        streets = [Street(**street) for street in streets]
+        with db.atomic():
+            Street.bulk_create(streets, batch_size=100)
+    logger.info("Created %s streets", len(streets))
     return streets
 
 if __name__ == "__main__":
     db.connect()
-    db.create_tables([Address, Building, Bucket, Street])
+    models = [Address, Building, Bucket, Street]
+    db.drop_tables(models)
+    db.create_tables(models)
     n_grid = 200
     data_dir = os.path.join(os.getcwd(), 'gis_data')
     region = sys.argv[1]
+    street_models = create_streets(region)
     building_models, address_models = generate_buildings_and_addresses(region)
     create_buildings_and_addresses(building_models, address_models)
-    street_models = create_streets(region)
-    start_time = perf_counter()
-    consolidator = Consolidator(building_models, address_models, n_grid=n_grid)
-    consolidator.consolidate()
-    logger.info("Consolidated in %s s.", perf_counter() - start_time)
-    start_time = perf_counter()
-    with db.atomic():
-        Building.bulk_update(
-            consolidator.buildings,
-            fields=[Building.address_idx, Building.bucket_idx],
-            batch_size=100
-        )
-    logger.info("Updated %s buildings in %s.", len(consolidator.buildings), perf_counter() - start_time)
-    start_time = perf_counter()
-    with db.atomic():
-        Address.bulk_update(
-            consolidator.addresses,
-            fields=[Address.building_idx, Address.bucket_idx],
-            batch_size=100
-        )
-    logger.info("Updated %s addresses in %s.", len(consolidator.addresses), perf_counter() - start_time)
-    extent = consolidator.buildings_grid.extent
-    coord_list = [(extent[0], extent[2]), (extent[1], extent[3])]
-    Bucket.create(region=region, extent=coord_list,n_grid=n_grid)
-    logger.info("Created '%s' which spans %s", region, coord_list)

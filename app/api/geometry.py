@@ -108,7 +108,7 @@ class GridPartition:
             c (array): column index of `self.item[i]`
             r (array): `r`: row index of `self.item[i]`
         """
-        indices = c + self.n * (r - 1)
+        indices = c + self.n * r
         buckets = [[] for _ in range(self.n**2)]
         for item, idx in zip(self.items, indices):
             buckets[idx].append(item)
@@ -117,7 +117,7 @@ class GridPartition:
         return buckets
 
     def index_for_col_row(self, col: int, row: int) -> Optional[int]:
-        idx = col + self.n * (row - 1)
+        idx = col + self.n * row
         return idx if idx >= 0 else None
 
     def index_for_coordinate(self, loc) -> Optional[int]:
