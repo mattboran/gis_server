@@ -6,8 +6,10 @@ import numpy as np
 import peewee as pw
 from geopy import Point
 from geopy.distance import great_circle
+from shapely.geometry import Polygon
 
-from .db import db
+from api.db import db
+from api.geometry import LAT_LON_TO_M
 
 CoordinateList = List[Tuple[float, float]]
 
@@ -142,6 +144,15 @@ class Building(pw.Model):
         indep_var = (np.array(self.polygon_points) - min_point) / extent
         res = indep_var * self.xy_extent_in_meters
         return [tuple(x) for x in res]
+
+    @cached_property
+    def simplified_polygon(self) -> CoordinateList:
+        points = Polygon(self.polygon_points)
+        if len(self.polygon_points) > 15:
+            min_x, min_y, max_x, max_y = self.bbox
+            tolerance = min((max_x - min_x), (max_y - min_y)) / 5.0
+            return points.simplify(tolerance, preserve_topology=False)
+        return points
 
     class Meta:
         database = db

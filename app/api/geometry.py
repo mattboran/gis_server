@@ -5,11 +5,7 @@ import geopy
 import geopy.distance
 import numpy as np
 
-from .models import Building, Address
-
-Centerable = Union[Building, Address]
-
-LAT_LON_TO_M = 111_139
+LAT_LON_TO_M = 111_139.0
 FT_TO_M = 0.3048
 
 logger = logging.getLogger(__name__)
@@ -62,7 +58,7 @@ class Ray:
 
 class GridPartition:
 
-    def __init__(self, n: int, items: List[Centerable], extent: Union[np.array, None]=None):
+    def __init__(self, n: int, items: List, extent: Union[np.array, None]=None):
         self.n = n
         self.items = items
         centers = [item.center for item in items]
@@ -86,7 +82,7 @@ class GridPartition:
                   max_y + y_delta * delta)
         return np.array(extent)
 
-    def partition(self) -> List[List[Centerable]]:
+    def partition(self) -> List[List]:
         """
         Partition `self.items` into an `n` by `n` grid of buckets,
         where each bucket has some `items` in it.
@@ -99,7 +95,7 @@ class GridPartition:
         c_rows = np.searchsorted(rows, self.centers[1,])
         return self.make_buckets(c_cols, c_rows)
 
-    def make_buckets(self, c: np.array, r: np.array) -> List[List[Centerable]]:
+    def make_buckets(self, c: np.array, r: np.array) -> List[List]:
         """
         Helper method to create buckets out of items at indices created in
         the `partition` method.
@@ -129,7 +125,7 @@ class GridPartition:
         row = np.searchsorted(self.rows, loc[1])
         return col, row
 
-    def get_items_in_bucket_for_coordinate(self, loc) -> List[Centerable]:
+    def get_items_in_bucket_for_coordinate(self, loc) -> List:
         idx = self.index_for_coordinate(loc)
         if idx:
             return self.buckets[idx]
@@ -138,17 +134,17 @@ class GridPartition:
 
 class Consolidator:
 
-    def __init__(self, buildings: List[Building], addresses: List[Address], n_grid=150):
+    def __init__(self, buildings, addresses, n_grid=150):
         self.n = n_grid
         self.buildings_grid = GridPartition(n_grid, buildings)
         self.address_grid = GridPartition(n_grid, addresses, extent=self.buildings_grid.extent)
 
     @property
-    def buildings(self) -> List[Centerable]:
+    def buildings(self) -> List:
         return self.buildings_grid.items
 
     @property
-    def addresses(self) -> List[Centerable]:
+    def addresses(self) -> List:
         return self.address_grid.items
 
     def consolidate(self):
