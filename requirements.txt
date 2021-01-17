@@ -11,5 +11,6 @@ munch==2.5.0
 numpy==1.18.0
 peewee==3.14.0
 pydantic==1.7.3
+shapely==1.7.1
 six==1.15.0
 starlette==0.13.6
