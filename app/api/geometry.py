@@ -67,6 +67,12 @@ def minimum_bounding_rectangle(points):
     rval[3] = np.dot([x1, y1], r)
     return rval
 
+def length_in_meters(v1, v2) -> float:
+    p1 = geopy.Point(latitude=v1[1], longitude=v1[0])
+    p2 = geopy.Point(latitude=v2[1], longitude=v2[0])
+    return geopy.distance.great_circle(p1, p2).meters
+
+
 class Ray:
 
     def __init__(self, loc: Tuple[float, float], heading: float):
@@ -92,7 +98,7 @@ class Ray:
         """
         return self.ro + t * self.rd
 
-    def line_intersection(self, line: Tuple[np.array, np.array]) -> Optional[float]:
+    def line_intersection(self, line: Tuple[np.array, np.array]) -> Optional[Tuple[float, np.array, float]]:
         """
         Perform intersection test between self and `line`
 
@@ -109,7 +115,18 @@ class Ray:
         t1 = np.cross(v2, v1) / dot
         t2 = np.dot(v1, v3) / dot
         if t1 >= 0.0 and 0.0 <= t2 <= 1.0:
-            return t1
+            dxdy = v2
+            norm = np.array((-dxdy[1], dxdy[0]))
+            if np.dot(norm, self.rd) > 0:
+                norm = np.array((dxdy[1], -dxdy[0]))
+            length = np.linalg.norm(norm, ord=1)
+            if length != 0:
+                normalized = norm / length
+            else:
+                res = [0.0, 0.0]
+                res[np.argmax(norm)] = 1.0
+                normalized = np.array(res)
+            return t1, normalized, length_in_meters(l2, l1)
         return None
 
 

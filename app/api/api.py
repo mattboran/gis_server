@@ -1,7 +1,5 @@
-import json
 import logging
-from collections import Counter
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Any
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
@@ -31,13 +29,6 @@ class AddressResult(BaseModel):
     coord: CoordinateOut
     polygon_coords: Optional[List[CoordinateOut]]
 
-    @property
-    def hashable_polygon_coords(self) -> Optional[str]:
-        if not self.polygon_coords:
-            return None
-        polygons = [json.dumps(p.dict()) for p in self.polygon_coords]
-        return "[" + ",".join(polygons) + "]"
-
 
 class AddressOut(BaseModel):
     count: int
@@ -46,10 +37,11 @@ class AddressOut(BaseModel):
 
 class IntersectionResult(BaseModel):
     idx: int
-    t: float
-    dist: float
     address: str
     point: CoordinateOut
+    normal: PointOut
+    face_length: float
+    face_height: float
 
 
 class IntersectionOut(BaseModel):
@@ -58,34 +50,27 @@ class IntersectionOut(BaseModel):
 
 
 def addresses_for_indices(indices):
-    return (Address.select(Address.predirective, Address.address_1, Address.street_name,
+    return (Address.select(Address.idx, Address.predirective, Address.address_1, Address.street_name,
                            Address.post_type, Address.region, Address.coord,
                            Address.building_idx, Address.street_idx, Building.idx,
-                           Building.polygon_points)
+                           Building.polygon_points, Building.height)
                         .where(Address.bucket_idx << indices)
                         .join(Building, attr='building', on=(Building.idx == Address.building_idx)))
-
-def address_output(addresses):
-    result = []
-    for address in addresses:
-        predirective = f" {address.predirective} " if address.predirective else ""
-        street = address.address_1 + predirective + address.street_name + " " + address.post_type
-        full_address = street + ", " + address.region
-        coord = CoordinateOut(latitude=address.coord[0][1], longitude=address.coord[0][0])
-        polygon = address.building.min_bounding_rect
-        polygon_coords = [CoordinateOut(latitude=p[1], longitude=p[0]) for p in polygon]
-        addr = AddressResult(address=full_address,
-                            coord=coord,
-                            polygon_coords=polygon_coords)
-        result.append(addr)
-    return result
 
 @router.get('/addresses', response_model=AddressOut)
 async def get_addresses(region: str, lat: float, lon: float):
     indices = (Bucket.get(Bucket.region == region)
                      .indices_surrounding_coordinate((lon, lat)))
     addresses = addresses_for_indices(indices)
-    result = address_output(addresses)
+    result = []
+    for address in addresses:
+        coord = CoordinateOut(latitude=address.coord[0][1], longitude=address.coord[0][0])
+        polygon = address.building.min_bounding_rect
+        polygon_coords = [CoordinateOut(latitude=p[1], longitude=p[0]) for p in polygon]
+        addr = AddressResult(address=address.full_name,
+                            coord=coord,
+                            polygon_coords=polygon_coords)
+        result.append(addr)
     return {
         'count': len(result),
         'result': list(result)
@@ -96,24 +81,27 @@ async def get_intersection(region: str, lat: float, lon: float, heading: float):
     with Timer("Calculating intersection:"):
         indices = (Bucket.get(Bucket.region == region)
                         .indices_surrounding_coordinate((lon, lat)))
-        buildings = Building.get_buildings_for_bucket_indices(indices)
+        addresses = addresses_for_indices(indices)
         t_vals, indices = [], []
         ray = geom.Ray((lon, lat), heading)
-        for i, b in enumerate(buildings):
-            isects = [ray.line_intersection(l) for l in b.lines_for_shape]
+        for i, a in enumerate(addresses):
+            isects = [ray.line_intersection(l) for l in a.building.lines_for_shape]
             ts = [t for t in isects if t]
             if len(ts) > 1:
-                t_vals.append(min(ts))
+                t_vals.append(min(ts, key=lambda t: t[0]))
                 indices.append(i)
-        t_vals.sort()
-        pts = [ray.point_at(t) for t in t_vals]
+        t_vals.sort(key=lambda t: t[0])
+        pts = [ray.point_at(t[0]) for t in t_vals]
+        normals = [t[1] for t in t_vals]
+        face_lengths = [t[2] for t in t_vals]
         result = []
         for i, index in enumerate(indices):
-            result.append(IntersectionResult(idx=buildings[index].idx,
-                                            t=t_vals[i],
-                                            dist=t_vals[i] * geom.LAT_LON_TO_M,
-                                            address=buildings[index].address.full_address,
-                                            point=CoordinateOut(latitude=pts[i][1], longitude=pts[i][0])).dict())
+            result.append(IntersectionResult(idx=addresses[index].idx,
+                                             address=addresses[index].full_name,
+                                             point=CoordinateOut(latitude=pts[i][1], longitude=pts[i][0]),
+                                             normal=PointOut(x=normals[i][0], y=normals[i][1]),
+                                             face_length=face_lengths[i],
+                                             face_height=addresses[index].building.height * geom.FT_TO_M or 5.0))
     return {
         'count': len(result),
         'result': result

@@ -55,7 +55,7 @@ class Address(pw.Model):
     idx = pw.IntegerField(primary_key=True)
     region = pw.TextField()
     building_type = pw.TextField(null=True)
-    address_1 = pw.TextField(null=True) # TODO: - IntegerField
+    address_1 = pw.TextField(null=True)
     address_2 = pw.TextField(null=True)
     predirective = pw.TextField(null=True)
     postdirective = pw.TextField(null=True)
@@ -73,6 +73,11 @@ class Address(pw.Model):
     def center(self) -> Tuple[float, float]:
         return self.coord[0]
 
+    @property
+    def full_name(self) -> str:
+        components = [self.address_1, self.predirective, self.street_name, self.post_type, ", " + self.region]
+        return " ".join([c for c in components if c])
+
     class Meta:
         database = db
 
@@ -85,16 +90,6 @@ class Building(pw.Model):
     building_type = pw.TextField(null=False)
     polygon_points = CoordinateListField(null=False)
     bucket_idx = pw.IntegerField(null=True)
-    # TODO: - This can probably be removed
-    address_idx = pw.IntegerField(null=True)
-
-    @staticmethod
-    def get_buildings_for_bucket_indices(indices):
-        return (Building.select(Building.idx, Building.polygon_points, Building.height,
-                                Building.ground_elevation, Building.building_type,
-                                Address.full_address, Address.coord)
-                        .join(Address, attr='address', on=(Building.idx==Address.building_idx))
-                        .where(Building.bucket_idx << indices))
 
     @cached_property
     def center(self) -> Tuple[float, float]:
@@ -117,7 +112,7 @@ class Building(pw.Model):
 
     @cached_property
     def lines_for_shape(self) -> List[Tuple[np.array, np.array]]:
-        points = np.array(self.polygon_points).T
+        points = np.array(self.min_bounding_rect).T
         return [(points[:,i], points[:,i+1]) for i in range(points.shape[1]-1)]
 
     @cached_property
