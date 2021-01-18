@@ -87,7 +87,6 @@ jobs:
         uses: shimataro/ssh-key-action@v2
         with:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          name: id_rsa_gis
           known_hosts: ${{ secrets.KNOWN_HOSTS }}
       - run: |
           git remote add devserver root@104.131.170.183:/root/gis_server_repo
