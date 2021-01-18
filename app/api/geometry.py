@@ -237,15 +237,13 @@ class Consolidator:
                 continue
 
             addresses_for_building = [[] for _ in shape_bucket]
-            for j, address in enumerate(address_bucket):
+            for address in address_bucket:
                 point = np.array(address.center)
                 centers = np.array([b.center for b in shape_bucket]).T
                 ds = distances_to_loc(centers, point)
-                addresses_for_building[np.argmin(ds)].append(j)
-            addr_indices = [addresses_for_building[i] for i in range(len(shape_bucket))]
+                addresses_for_building[np.argmin(ds)].append(address)
             for j, building in enumerate(shape_bucket):
-                indices = addr_indices[j]
-                if indices:
-                    building.address_idx = address_bucket[indices[0]].idx
-                    for k in indices:
-                        address_bucket[k].building_idx = building.idx
+                indices = [a.idx for a in addresses_for_building[j]]
+                building.address_idxs = indices
+                for k in range(len(indices)):
+                    address_bucket[k].building_idx = building.idx

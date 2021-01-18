@@ -22,6 +22,14 @@ class CoordinateListField(pw.TextField):
         return json.loads(value)
 
 
+class IndexListField(pw.TextField):
+    def db_value(self, value: List[int]) -> str:
+        return json.dumps(value)
+    
+    def python_value(self, value) -> List[int]:
+        return json.loads(value)
+
+
 class Bucket(pw.Model):
     region = pw.TextField(primary_key=True)
     extent = CoordinateListField()
@@ -95,6 +103,7 @@ class Building(pw.Model):
     building_type = pw.TextField(null=False)
     polygon_points = CoordinateListField(null=False)
     bucket_idx = pw.IntegerField(null=True)
+    address_idxs = IndexListField(null=True)
 
     @cached_property
     def center(self) -> Tuple[float, float]:

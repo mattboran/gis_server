@@ -25,7 +25,7 @@ if __name__ == "__main__":
         with db.atomic():
             Building.bulk_update(
                 consolidator.buildings,
-                fields=[Building.address_idx, Building.bucket_idx],
+                fields=[Building.address_idxs, Building.bucket_idx],
                 batch_size=100
             )
     with Timer("Updating addresses in db"):
