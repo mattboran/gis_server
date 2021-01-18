@@ -1,4 +1,4 @@
-name: Docker
+name: Test, publish, deploy
 
 on:
   push:
@@ -73,3 +73,25 @@ jobs:
 
           docker tag $IMAGE_NAME $IMAGE_ID:$VERSION
           docker push $IMAGE_ID:$VERSION
+  
+  deploy:
+    needs: push
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: '0'
+          ref: 'main'
+      - name: Install SSH key
+        uses: shimatoro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          name: id_rsa_gis
+          known_hosts: ${{ secrets.KNOWN_HOSTS }}
+      - run: |
+          git remote add devserver root@104.131.170.183:/root/gis_server_repo
+          git config --global user.email "mattboran@gmail.com"
+          git config --global user.name "mattboran"
+          git checkout main
+          git push -u devserver main
+
