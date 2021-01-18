@@ -78,6 +78,11 @@ class Address(pw.Model):
         components = [self.address_1, self.predirective, self.street_name, self.post_type, ", " + self.region]
         return " ".join([c for c in components if c])
 
+    @property
+    def full_name_without_region(self) -> str:
+        components = [self.address_1, self.predirective, self.street_name, self.post_type]
+        return " ".join([c for c in components if c])
+
     class Meta:
         database = db
 

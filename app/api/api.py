@@ -32,7 +32,7 @@ class AddressResult(BaseModel):
 
 class AddressOut(BaseModel):
     count: int
-    result: List[Any]
+    result: List[AddressResult]
 
 
 class IntersectionResult(BaseModel):
@@ -68,8 +68,8 @@ async def get_addresses(region: str, lat: float, lon: float):
         polygon = address.building.min_bounding_rect
         polygon_coords = [CoordinateOut(latitude=p[1], longitude=p[0]) for p in polygon]
         addr = AddressResult(address=address.full_name,
-                            coord=coord,
-                            polygon_coords=polygon_coords)
+                             coord=coord,
+                             polygon_coords=polygon_coords)
         result.append(addr)
     return {
         'count': len(result),
@@ -91,13 +91,13 @@ async def get_intersection(region: str, lat: float, lon: float, heading: float):
                 t_vals.append(min(ts, key=lambda t: t[0]))
                 indices.append(i)
         t_vals.sort(key=lambda t: t[0])
-        pts = [ray.point_at(t[0]) for t in t_vals]
-        normals = [t[1] for t in t_vals]
-        face_lengths = [t[2] for t in t_vals]
+        pts = [t[1] for t in t_vals]
+        normals = [t[2] for t in t_vals]
+        face_lengths = [t[3] for t in t_vals]
         result = []
         for i, index in enumerate(indices):
             result.append(IntersectionResult(idx=addresses[index].idx,
-                                             address=addresses[index].full_name,
+                                             address=addresses[index].full_name_without_region,
                                              point=CoordinateOut(latitude=pts[i][1], longitude=pts[i][0]),
                                              normal=PointOut(x=normals[i][0], y=normals[i][1]),
                                              face_length=face_lengths[i],

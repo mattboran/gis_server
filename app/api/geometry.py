@@ -98,7 +98,7 @@ class Ray:
         """
         return self.ro + t * self.rd
 
-    def line_intersection(self, line: Tuple[np.array, np.array]) -> Optional[Tuple[float, np.array, float]]:
+    def line_intersection(self, line: Tuple[np.array, np.array]) -> Optional[Tuple[float, np.array, np.array, float]]:
         """
         Perform intersection test between self and `line`
 
@@ -126,7 +126,8 @@ class Ray:
                 res = [0.0, 0.0]
                 res[np.argmax(norm)] = 1.0
                 normalized = np.array(res)
-            return t1, normalized, length_in_meters(l2, l1)
+            midpoint = (l1 + l2) / 2.0
+            return t1, midpoint, normalized, length_in_meters(l2, l1)
         return None
 
 
