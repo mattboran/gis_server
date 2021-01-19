@@ -89,7 +89,6 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           known_hosts: ${{ secrets.KNOWN_HOSTS }}
       - run: |
-          ssh-keyscan -H 104.131.170.183 > ~/.ssh/known_hosts
           git remote add devserver publisher@104.131.170.183:/home/publisher/gis_server_repo
           git config --global user.email "mattboran@gmail.com"
           git config --global user.name "mattboran"
