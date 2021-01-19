@@ -89,7 +89,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           known_hosts: ${{ secrets.KNOWN_HOSTS }}
       - run: |
-          git remote add devserver root@104.131.170.183:/root/gis_server_repo
+          git remote add devserver publisher@104.131.170.183:/home/publisher/gis_server_repo
           git config --global user.email "mattboran@gmail.com"
           git config --global user.name "mattboran"
           git checkout main
