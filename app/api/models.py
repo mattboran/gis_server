@@ -25,7 +25,7 @@ class CoordinateListField(pw.TextField):
 class IndexListField(pw.TextField):
     def db_value(self, value: List[int]) -> str:
         return json.dumps(value)
-    
+
     def python_value(self, value) -> List[int]:
         return json.loads(value)
 

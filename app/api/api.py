@@ -1,5 +1,5 @@
 import logging
-from typing import List, Optional, Any
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
@@ -91,7 +91,6 @@ async def get_intersection(region: str, lat: float, lon: float, heading: float):
     with Timer("Calculating intersection:"):
         indices = (Bucket.get(Bucket.region == region)
                         .indices_surrounding_coordinate((lon, lat)))
-        # addresses = addresses_for_indices(indices)
         buildings = buildings_for_indices(indices)
         t_vals, indices = [], []
         ray = geom.Ray((lon, lat), heading)
@@ -107,8 +106,8 @@ async def get_intersection(region: str, lat: float, lon: float, heading: float):
         t_vals = [t[0] for t in t_vals]
         result = []
         for i, index in enumerate(indices):
-            addr_idxs = [idx for idx in buildings[index].address_idxs]
-            addresses = "\n,".join([address.full_name_without_region for address in addresses_for_ids(addr_idxs)])
+            addr_idxs = buildings[index].address_idxs
+            addresses = ",\n".join([address.full_name_without_region for address in addresses_for_ids(addr_idxs)])
             result.append(IntersectionResult(idx=buildings[index].idx,
                                              t=t_vals[i],
                                              address=addresses,
