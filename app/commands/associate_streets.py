@@ -38,10 +38,11 @@ if __name__ == "__main__":
         street_map = dict()
         street_query = Street.select().where(Street.region == region)
         for street in street_query:
-            if street.full_name in street_map:
-                street_map[street.full_name].append(street)
+            key = street.full_address_with_region
+            if key in street_map:
+                street_map[key].append(street)
             else:
-                street_map[street.full_name] = [street]
+                street_map[key] = [street]
     with Timer("Getting addresses"):
         addresses = list(Address.select().where(Address.region == region))
     with Timer("Associating streets"):

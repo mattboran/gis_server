@@ -55,7 +55,7 @@ def addresses_for_ids(idxs):
                            Address.post_type, Address.region)
                         .where(Address.idx << idxs))
 
-def addresses_for_indices(indices):
+def addresses_for_bucket_indices(indices):
     return (Address.select(Address.idx, Address.predirective, Address.address_1, Address.street_name,
                            Address.post_type, Address.region, Address.coord,
                            Address.building_idx, Address.street_idx, Building.idx,
@@ -63,7 +63,7 @@ def addresses_for_indices(indices):
                         .where(Address.bucket_idx << indices)
                         .join(Building, attr='building', on=(Building.idx == Address.building_idx)))
 
-def buildings_for_indices(indices):
+def buildings_for_bucket_indices(indices):
     return (Building.select(Building.idx, Building.address_idxs, Building.polygon_points, Building.height)
                         .where(Building.bucket_idx << indices))
 
@@ -71,7 +71,7 @@ def buildings_for_indices(indices):
 async def get_addresses(region: str, lat: float, lon: float):
     indices = (Bucket.get(Bucket.region == region)
                      .indices_surrounding_coordinate((lon, lat)))
-    addresses = addresses_for_indices(indices)
+    addresses = addresses_for_bucket_indices(indices)
     result = []
     for address in addresses:
         coord = CoordinateOut(latitude=address.coord[0][1], longitude=address.coord[0][0])
@@ -91,7 +91,7 @@ async def get_intersection(region: str, lat: float, lon: float, heading: float):
     with Timer("Calculating intersection:"):
         indices = (Bucket.get(Bucket.region == region)
                         .indices_surrounding_coordinate((lon, lat)))
-        buildings = buildings_for_indices(indices)
+        buildings = buildings_for_bucket_indices(indices)
         t_vals, indices = [], []
         ray = geom.Ray((lon, lat), heading)
         for i, building in enumerate(buildings):
@@ -107,7 +107,7 @@ async def get_intersection(region: str, lat: float, lon: float, heading: float):
         result = []
         for i, index in enumerate(indices):
             addr_idxs = buildings[index].address_idxs
-            addresses = ",\n".join([address.full_name_without_region for address in addresses_for_ids(addr_idxs)])
+            addresses = ",\n".join([address.full_address_without_region for address in addresses_for_ids(addr_idxs)])
             result.append(IntersectionResult(idx=buildings[index].idx,
                                              t=t_vals[i],
                                              address=addresses,

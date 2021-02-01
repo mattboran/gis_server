@@ -7,3 +7,5 @@ database.db*
 pyrightconfig.json
 .gh_token
 debug/
+*.dat
+*.idx

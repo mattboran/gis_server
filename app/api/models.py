@@ -77,17 +77,20 @@ class Address(pw.Model):
     building_idx = pw.IntegerField(null=True)
     street_idx = pw.IntegerField(null=True)
 
+    @staticmethod
+    def all(region: str) -> List:
+        return list(Address.select().where(Address.region == region))
+
     @property
     def center(self) -> Tuple[float, float]:
         return self.coord[0]
 
     @property
-    def full_name(self) -> str:
-        components = [self.address_1, self.predirective, self.street_name, self.post_type, ", " + self.region]
-        return " ".join([c for c in components if c])
+    def full_address_with_region(self) -> str:
+        return self.full_address_without_region + ", " + f"{self.region}".capitalize()
 
     @property
-    def full_name_without_region(self) -> str:
+    def full_address_without_region(self) -> str:
         components = [self.address_1, self.predirective, self.street_name, self.post_type]
         return " ".join([c for c in components if c])
 
@@ -103,7 +106,11 @@ class Building(pw.Model):
     building_type = pw.TextField(null=False)
     polygon_points = CoordinateListField(null=False)
     bucket_idx = pw.IntegerField(null=True)
-    address_idxs = IndexListField(null=True)
+    address_idxs = IndexListField(default=[])
+
+    @staticmethod
+    def all(region=None) -> List:
+        return list(Building.select().where(Building.region == region))
 
     @cached_property
     def center(self) -> Tuple[float, float]:
