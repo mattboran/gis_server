@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 
-docker stop $GIS_SERVER
-docker rm $GIS_SERVER
+docker stop $GIS_SERVER 2>/dev/null
+docker rm $GIS_SERVER 2>/dev/null
 docker run \
     --name $GIS_SERVER \
-    --restart always \
     -p 8000:80 \
     -v $GIS_SERVER_DIR/app:/app \
     -d \
