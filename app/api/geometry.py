@@ -72,9 +72,17 @@ def minimum_bounding_rectangle(points):
 def length_in_meters(v1, v2) -> float:
     p1 = geopy.Point(latitude=v1[1], longitude=v1[0])
     p2 = geopy.Point(latitude=v2[1], longitude=v2[0])
-    return geopy.distance.great_circle(p1, p2).meters
+    dist = geopy.distance.great_circle(p1, p2).meters
+    logger.info("v1: %s, v2: %s, dist: %s", v1, v2, dist)
+    return dist
 
-def sorted_points_by_polar_angle(points, origin) -> np.array:
+def sorted_points_by_polar_angle(points: np.array, origin: np.array) -> np.array:
+    """
+    Sorts `points` by polar angle with respect to origin
+
+    Returns:
+        points, but sorted by polar angle.
+    """
     origin = np.array(origin)
     points = points.T
     origins = np.array([origin,]*points.shape[1]).T
