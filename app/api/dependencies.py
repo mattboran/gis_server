@@ -13,7 +13,7 @@ try:
     path = os.path.join(os.getcwd(), '.env')
     with open (path, 'r') as env_file:
         lines = env_file.readlines()
-        env = {l.split('=')[0]: l.split('=')[1] for l in lines}
+        env = {l.split('=')[0]: l.split('=')[1].strip() for l in lines}
 except FileNotFoundError:
     env = {}
 
