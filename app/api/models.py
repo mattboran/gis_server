@@ -1,12 +1,9 @@
 import json
-from typing import List, Tuple, Optional
+from typing import List, Tuple
 from functools import cached_property
 
 import numpy as np
 import peewee as pw
-from geopy import Point
-from geopy.distance import great_circle
-from shapely.geometry import Polygon
 
 from api.db import db
 from api.geometry import minimum_bounding_rectangle, sorted_points_by_polar_angle
@@ -30,35 +27,6 @@ class IndexListField(pw.TextField):
         return json.loads(value)
 
 
-class Bucket(pw.Model):
-    region = pw.TextField(primary_key=True)
-    extent = CoordinateListField()
-    n_grid = pw.IntegerField()
-
-    def index_for_coordinate(self, coord: Tuple[float, float]) -> Optional[int]:
-        cols = np.linspace(self.extent[0][0], self.extent[1][0], num=self.n_grid)
-        rows = np.linspace(self.extent[0][1], self.extent[1][1], num=self.n_grid)
-        col = np.searchsorted(cols, coord[0])
-        row = np.searchsorted(rows, coord[1])
-        idx = col + self.n_grid * (row - 1)
-        idx = idx if idx > 0 else None
-        return idx
-
-    def indices_surrounding_coordinate(self, coord: Tuple[float, float]) -> List[int]:
-        cols = np.linspace(self.extent[0][0], self.extent[1][0], num=self.n_grid)
-        rows = np.linspace(self.extent[0][1], self.extent[1][1], num=self.n_grid)
-        col = np.searchsorted(cols, coord[0])
-        row = np.searchsorted(rows, coord[1])
-        indices = []
-        for r in range(row-1, row+2):
-            for c in range(col-1, col+2):
-                indices.append(c + self.n_grid * (r - 1))
-        return [idx for idx in indices if idx >= 0]
-
-    class Meta:
-        database = db
-
-
 class Address(pw.Model):
     idx = pw.IntegerField(primary_key=True)
     region = pw.TextField()
@@ -73,9 +41,6 @@ class Address(pw.Model):
     unit_identifier = pw.TextField(null=True)
     full_address = pw.TextField()
     coord = CoordinateListField()
-    bucket_idx = pw.IntegerField(null=True)
-    building_idx = pw.IntegerField(null=True)
-    street_idx = pw.IntegerField(null=True)
 
     @staticmethod
     def all(region: str) -> List:
@@ -105,8 +70,6 @@ class Building(pw.Model):
     ground_elevation = pw.IntegerField(null=True)
     building_type = pw.TextField(null=False)
     polygon_points = CoordinateListField(null=False)
-    bucket_idx = pw.IntegerField(null=True)
-    address_idxs = IndexListField(default=[])
 
     @staticmethod
     def all(region=None) -> List:
@@ -137,52 +100,9 @@ class Building(pw.Model):
         return [(points[:,i], points[:,i+1]) for i in range(points.shape[1]-1)]
 
     @cached_property
-    def xy_extent_in_meters(self) -> np.array:
-        min_x, min_y, max_x, max_y = self.bbox
-        origin = Point(latitude=min_y, longitude=min_x)
-        max_x_point = Point(latitude=min_y, longitude=max_x)
-        max_y_point = Point(latitude=max_y, longitude=min_x)
-        x_distance = great_circle(origin, max_x_point).meters
-        y_distance = great_circle(origin, max_y_point).meters
-        return np.array((x_distance, y_distance))
-
-    @cached_property
-    def origin(self) -> Tuple[float, float]:
-        x, y, _, _ = self.bbox
-        return x, y
-
-    @cached_property
-    def points_in_local_coords(self) -> List[Tuple[float, float]]:
-        min_x, min_y, max_x, max_y = self.bbox
-        min_point = np.array((min_x, min_y))
-        max_point = np.array((max_x, max_y))
-        extent = max_point - min_point
-        indep_var = (np.array(self.polygon_points) - min_point) / extent
-        res = indep_var * self.xy_extent_in_meters
-        return [tuple(x) for x in res]
-
-    @cached_property
     def min_bounding_rect(self) -> CoordinateList:
         rect = minimum_bounding_rectangle(self.polygon_points)
         return sorted_points_by_polar_angle(rect, self.center)
-
-    class Meta:
-        database = db
-
-
-class Street(pw.Model):
-    idx = pw.IntegerField(primary_key=True)
-    region = pw.TextField(null=False)
-    l_min_addr = pw.IntegerField(null=True)
-    l_max_addr = pw.IntegerField(null=True)
-    r_min_addr = pw.IntegerField(null=True)
-    r_max_addr = pw.IntegerField(null=True)
-    prefix = pw.TextField(null=True)
-    name = pw.TextField()
-    street_type = pw.TextField(null=True)
-    suffix = pw.TextField(null=True)
-    full_name = pw.TextField()
-    coords = CoordinateListField()
 
     class Meta:
         database = db
