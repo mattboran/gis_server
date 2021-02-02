@@ -1,5 +1,6 @@
 import logging
 from typing import Tuple, List, Union, Optional
+import sys
 
 import geopy
 import geopy.distance
@@ -9,6 +10,7 @@ LAT_LON_TO_M = 111_139.0
 FT_TO_M = 0.3048
 
 logger = logging.getLogger(__name__)
+logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
 def minimum_bounding_rectangle(points):
     """
@@ -61,9 +63,9 @@ def minimum_bounding_rectangle(points):
     r = rotations[best_idx]
 
     rval = np.zeros((4, 2))
-    rval[0] = np.dot([x1, y2], r)
+    rval[2] = np.dot([x1, y2], r)
     rval[1] = np.dot([x2, y2], r)
-    rval[2] = np.dot([x2, y1], r)
+    rval[0] = np.dot([x2, y1], r)
     rval[3] = np.dot([x1, y1], r)
     return rval
 
@@ -72,6 +74,15 @@ def length_in_meters(v1, v2) -> float:
     p2 = geopy.Point(latitude=v2[1], longitude=v2[0])
     return geopy.distance.great_circle(p1, p2).meters
 
+def sorted_points_by_polar_angle(points, origin) -> np.array:
+    origin = np.array(origin)
+    points = points.T
+    origins = np.array([origin,]*points.shape[1]).T
+    vectors = points - origins
+    angles = np.arctan2(vectors[0,], vectors[1,]) + np.pi
+    points_with_angles = np.vstack((points, angles))
+    sorted_points_with_angles = points_with_angles[:, points_with_angles[2,].argsort()]
+    return sorted_points_with_angles[:2,].T
 
 class Ray:
 

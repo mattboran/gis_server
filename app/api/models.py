@@ -9,7 +9,7 @@ from geopy.distance import great_circle
 from shapely.geometry import Polygon
 
 from api.db import db
-from api.geometry import minimum_bounding_rectangle
+from api.geometry import minimum_bounding_rectangle, sorted_points_by_polar_angle
 
 CoordinateList = List[Tuple[float, float]]
 
@@ -162,17 +162,9 @@ class Building(pw.Model):
         return [tuple(x) for x in res]
 
     @cached_property
-    def simplified_polygon(self) -> CoordinateList:
-        points = Polygon(self.polygon_points)
-        if len(self.polygon_points) > 15:
-            min_x, min_y, max_x, max_y = self.bbox
-            tolerance = min((max_x - min_x), (max_y - min_y)) / 5.0
-            return points.simplify(tolerance, preserve_topology=False)
-        return points
-
-    @cached_property
     def min_bounding_rect(self) -> CoordinateList:
-        return minimum_bounding_rectangle(self.polygon_points)
+        rect = minimum_bounding_rectangle(self.polygon_points)
+        return sorted_points_by_polar_angle(rect, self.center)
 
     class Meta:
         database = db

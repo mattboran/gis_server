@@ -1,9 +1,7 @@
 import logging
 import time
-import sys
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 
 class Timer:
     def __init__(self, reason):
