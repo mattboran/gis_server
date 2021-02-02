@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+GIS_SERVER="gis_server"
+GIS_SERVER_DIR="$HOME/$GIS_SERVER"
 
 docker stop $GIS_SERVER 2>/dev/null
 docker rm $GIS_SERVER 2>/dev/null
