@@ -10,7 +10,6 @@ from api.dependencies import get_token
 from commands.util import Timer
 
 router = APIRouter(dependencies=[Depends(get_token)])
-
 logger = logging.getLogger(__name__)
 
 class CoordinateOut(BaseModel):
@@ -47,6 +46,7 @@ class IntersectionResult(BaseModel):
 class IntersectionOut(BaseModel):
     count: int
     result: List[IntersectionResult]
+
 
 @router.get('/addresses', response_model=AddressOut)
 async def get_rtree_addresses(region: str, lat: float, lon: float):

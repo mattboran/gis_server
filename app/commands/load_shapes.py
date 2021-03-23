@@ -7,8 +7,8 @@ import sys
 import fiona
 
 from api.db import db
-from api.models import Building, Address, Bucket, Street
-from commands.factory import Factory, BuildingShapeFactory, AddressedLocationFactory, StreetFactory
+from api.models import Building, Address
+from commands.factory import Factory, BuildingShapeFactory, AddressedLocationFactory
 from commands.util import Timer
 
 logger = logging.getLogger(__name__)
@@ -16,6 +16,9 @@ logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 
 
 def load_shapefile(filename: str, factory: Factory):
+    if not os.path.isfile(filename):
+        logger.error("Could not open %s", filename)
+        return []
     with Timer(f"Reading {filename}"):
         with fiona.open(filename, 'r') as source:
             item_list = list(source)
@@ -53,24 +56,13 @@ def create_buildings_and_addresses(buildings: List[Building], addresses: List[Ad
             Building.bulk_create(buildings, batch_size=100)
     logger.info("Created %s buildings", len(building_models))
 
-def create_streets(area: str) -> List[Street]:
-    with Timer("Creating streets"):
-        factory = StreetFactory(region)
-        streets = load_shapefile(os.path.join(data_dir, f'{area}_street.shp'), factory)
-        streets = [Street(**street) for street in streets]
-        with db.atomic():
-            Street.bulk_create(streets, batch_size=100)
-    logger.info("Created %s streets", len(streets))
-    return streets
-
 if __name__ == "__main__":
     db.connect()
-    models = [Address, Building, Bucket, Street]
+    models = [Address, Building]
     db.drop_tables(models)
     db.create_tables(models)
     n_grid = 200
     data_dir = os.path.join(os.getcwd(), 'gis_data')
     region = sys.argv[1]
-    street_models = create_streets(region)
     building_models, address_models = generate_buildings_and_addresses(region)
     create_buildings_and_addresses(building_models, address_models)

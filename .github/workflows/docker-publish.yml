@@ -93,5 +93,5 @@ jobs:
           git config --global user.email "mattboran@gmail.com"
           git config --global user.name "mattboran"
           git checkout main
-          git push -u devserver main
+          git push -u -f devserver main
 
