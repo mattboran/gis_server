@@ -1,5 +1,5 @@
 import logging
-from typing import Tuple, List, Union, Optional
+from typing import Tuple, Optional
 import sys
 
 import geopy
@@ -10,7 +10,7 @@ LAT_LON_TO_M = 111_139.0
 FT_TO_M = 0.3048
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 
 def minimum_bounding_rectangle(points):
     """

@@ -70,6 +70,7 @@ class Building(pw.Model):
     ground_elevation = pw.IntegerField(null=True)
     building_type = pw.TextField(null=False)
     polygon_points = CoordinateListField(null=False)
+    dob_id = pw.TextField(null=True) 
 
     @staticmethod
     def all(region=None) -> List:
