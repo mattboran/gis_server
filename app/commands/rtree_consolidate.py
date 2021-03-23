@@ -3,7 +3,6 @@ import sys
 
 from rtree import index
 
-from api.db import db
 from api.models import Address, Building
 from commands.util import Timer
 
